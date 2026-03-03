@@ -36,6 +36,12 @@ cp -f ../spineboy/export/*.json "$ROOT/spine-libgdx/spine-libgdx-tests/assets/sp
 cp -r ../spineboy/export/*.skel "$ROOT/spine-libgdx/spine-libgdx-tests/assets/spineboy/"
 cp -r ../spineboy/export/*-pma.* "$ROOT/spine-libgdx/spine-libgdx-tests/assets/spineboy/"
 
+rm -f "$ROOT/spine-libgdx/spine-libgdx-tests/assets/dragon/"*
+mkdir -p "$ROOT/spine-libgdx/spine-libgdx-tests/assets/dragon/"
+cp -f ../dragon/export/*.skel "$ROOT/spine-libgdx/spine-libgdx-tests/assets/dragon/"
+cp -f ../dragon/export/dragon-pma.atlas "$ROOT/spine-libgdx/spine-libgdx-tests/assets/dragon/"
+cp -f ../dragon/export/dragon-pma*.png "$ROOT/spine-libgdx/spine-libgdx-tests/assets/dragon/"
+
 rm -f "$ROOT/spine-libgdx/spine-libgdx-tests/assets/coin/"*
 cp -f ../coin/export/*.json "$ROOT/spine-libgdx/spine-libgdx-tests/assets/coin/"
 cp -f ../coin/export/*.skel "$ROOT/spine-libgdx/spine-libgdx-tests/assets/coin/"

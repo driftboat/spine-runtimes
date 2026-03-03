@@ -38,6 +38,7 @@ import com.badlogic.gdx.utils.Null;
 
 import com.esotericsoftware.spine.BonePose;
 import com.esotericsoftware.spine.Slot;
+import com.esotericsoftware.spine.SlotPose;
 
 /** An attachment that displays a textured quadrilateral.
  * <p>
@@ -81,13 +82,21 @@ public class RegionAttachment extends Attachment implements HasTextureRegion {
 	/** Calculates the {@link #offset} and {@link #uvs} using the region and the attachment's transform. Must be called if the
 	 * region, the region's properties, or the transform are changed. */
 	public void updateRegion () {
-		float width = getWidth(), height = getHeight();
+		computeRegionData(region, x, y, scaleX, scaleY, rotation, width, height, offset, uvs);
+	}
+
+	/** Computes offset and UV data for a given region and attachment transform, writing results into the provided arrays.
+	 * @param region The texture region to compute data for, or null.
+	 * @param offset Output array of length 8 for the computed vertex offsets.
+	 * @param uvs Output array of length 8 for the computed UVs. */
+	static void computeRegionData (@Null TextureRegion textureRegion, float x, float y, float scaleX, float scaleY, float rotation,
+		float width, float height, float[] offset, float[] uvs) {
 		float localX2 = width / 2;
 		float localY2 = height / 2;
 		float localX = -localX2;
 		float localY = -localY2;
 		boolean rotated = false;
-		if (region instanceof AtlasRegion region) {
+		if (textureRegion instanceof AtlasRegion region) {
 			localX += region.offsetX / region.originalWidth * width;
 			localY += region.offsetY / region.originalHeight * height;
 			if (region.degrees == 90) {
@@ -99,13 +108,11 @@ public class RegionAttachment extends Attachment implements HasTextureRegion {
 				localY2 -= (region.originalHeight - region.offsetY - region.packedHeight) / region.originalHeight * height;
 			}
 		}
-		float scaleX = getScaleX(), scaleY = getScaleY();
 		localX *= scaleX;
 		localY *= scaleY;
 		localX2 *= scaleX;
 		localY2 *= scaleY;
-		float r = getRotation() * degRad, cos = cos(r), sin = sin(r);
-		float x = getX(), y = getY();
+		float r = rotation * degRad, cos = cos(r), sin = sin(r);
 		float localXCos = localX * cos + x;
 		float localXSin = localX * sin;
 		float localYCos = localY * cos + y;
@@ -114,7 +121,6 @@ public class RegionAttachment extends Attachment implements HasTextureRegion {
 		float localX2Sin = localX2 * sin;
 		float localY2Cos = localY2 * cos + y;
 		float localY2Sin = localY2 * sin;
-		float[] offset = this.offset;
 		offset[BLX] = localXCos - localYSin;
 		offset[BLY] = localYCos + localXSin;
 		offset[ULX] = localXCos - localY2Sin;
@@ -124,8 +130,7 @@ public class RegionAttachment extends Attachment implements HasTextureRegion {
 		offset[BRX] = localX2Cos - localYSin;
 		offset[BRY] = localYCos + localX2Sin;
 
-		float[] uvs = this.uvs;
-		if (region == null) {
+		if (textureRegion == null) {
 			uvs[BLX] = 0;
 			uvs[BLY] = 0;
 			uvs[ULX] = 0;
@@ -135,23 +140,23 @@ public class RegionAttachment extends Attachment implements HasTextureRegion {
 			uvs[BRX] = 1;
 			uvs[BRY] = 0;
 		} else if (rotated) {
-			uvs[BLX] = region.getU2();
-			uvs[BLY] = region.getV();
-			uvs[ULX] = region.getU2();
-			uvs[ULY] = region.getV2();
-			uvs[URX] = region.getU();
-			uvs[URY] = region.getV2();
-			uvs[BRX] = region.getU();
-			uvs[BRY] = region.getV();
+			uvs[BLX] = textureRegion.getU2();
+			uvs[BLY] = textureRegion.getV();
+			uvs[ULX] = textureRegion.getU2();
+			uvs[ULY] = textureRegion.getV2();
+			uvs[URX] = textureRegion.getU();
+			uvs[URY] = textureRegion.getV2();
+			uvs[BRX] = textureRegion.getU();
+			uvs[BRY] = textureRegion.getV();
 		} else {
-			uvs[BLX] = region.getU2();
-			uvs[BLY] = region.getV2();
-			uvs[ULX] = region.getU();
-			uvs[ULY] = region.getV2();
-			uvs[URX] = region.getU();
-			uvs[URY] = region.getV();
-			uvs[BRX] = region.getU2();
-			uvs[BRY] = region.getV();
+			uvs[BLX] = textureRegion.getU2();
+			uvs[BLY] = textureRegion.getV2();
+			uvs[ULX] = textureRegion.getU();
+			uvs[ULY] = textureRegion.getV2();
+			uvs[URX] = textureRegion.getU();
+			uvs[URY] = textureRegion.getV();
+			uvs[BRX] = textureRegion.getU2();
+			uvs[BRY] = textureRegion.getV();
 		}
 	}
 
@@ -160,12 +165,18 @@ public class RegionAttachment extends Attachment implements HasTextureRegion {
 		this.region = region;
 	}
 
+	/** Returns the region, or if the attachment has a {@link #sequence}, the region for the given slot's
+	 * {@link SlotPose#getSequenceIndex()}. */
+	public @Null TextureRegion getRegion (SlotPose pose) {
+		if (sequence != null) return sequence.getFrameRegion(sequence.resolveIndex(pose));
+		return region;
+	}
+
 	public @Null TextureRegion getRegion () {
 		return region;
 	}
 
-	/** Transforms the attachment's four vertices to world coordinates. If the attachment has a {@link #sequence}, the region may
-	 * be changed.
+	/** Transforms the attachment's four vertices to world coordinates.
 	 * <p>
 	 * See <a href="https://esotericsoftware.com/spine-runtime-skeletons#World-transforms">World transforms</a> in the Spine
 	 * Runtimes Guide.
@@ -173,9 +184,9 @@ public class RegionAttachment extends Attachment implements HasTextureRegion {
 	 * @param offset The <code>worldVertices</code> index to begin writing values.
 	 * @param stride The number of <code>worldVertices</code> entries between the value pairs written. */
 	public void computeWorldVertices (Slot slot, float[] worldVertices, int offset, int stride) {
-		if (sequence != null) sequence.apply(slot.getAppliedPose(), this);
-
 		float[] vertexOffset = this.offset;
+		if (sequence != null) vertexOffset = sequence.getFrameOffset(sequence.resolveIndex(slot.getAppliedPose()));
+
 		BonePose bone = slot.getBone().getAppliedPose();
 		float x = bone.getWorldX(), y = bone.getWorldY();
 		float a = bone.getA(), b = bone.getB(), c = bone.getC(), d = bone.getD();
@@ -210,6 +221,13 @@ public class RegionAttachment extends Attachment implements HasTextureRegion {
 	 * See {@link #updateRegion()}. */
 	public float[] getOffset () {
 		return offset;
+	}
+
+	/** Returns the UVs, or if the attachment has a {@link #sequence}, the UVs for the given slot's
+	 * {@link SlotPose#getSequenceIndex()}. */
+	public float[] getUVs (SlotPose pose) {
+		if (sequence != null) return sequence.getFrameUVs(sequence.resolveIndex(pose));
+		return uvs;
 	}
 
 	public float[] getUVs () {
@@ -297,6 +315,7 @@ public class RegionAttachment extends Attachment implements HasTextureRegion {
 
 	public void setSequence (@Null Sequence sequence) {
 		this.sequence = sequence;
+		if (sequence != null) sequence.precompute(this);
 	}
 
 	public RegionAttachment copy () {

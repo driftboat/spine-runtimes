@@ -32,6 +32,7 @@ package com.esotericsoftware.spine.attachments;
 import static com.esotericsoftware.spine.utils.SpineUtils.*;
 
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.utils.Null;
 
 import com.esotericsoftware.spine.SlotPose;
 
@@ -40,6 +41,8 @@ public class Sequence {
 
 	private final int id = nextID();
 	private final TextureRegion[] regions;
+	private @Null float[][] frameUVs;
+	private @Null float[][] frameOffsets;
 	private int start, digits, setupIndex;
 
 	public Sequence (int count) {
@@ -54,17 +57,62 @@ public class Sequence {
 		start = other.start;
 		digits = other.digits;
 		setupIndex = other.setupIndex;
+
+		if (other.frameUVs != null) {
+			frameUVs = new float[other.frameUVs.length][];
+			for (int i = 0; i < frameUVs.length; i++) {
+				frameUVs[i] = new float[other.frameUVs[i].length];
+				arraycopy(other.frameUVs[i], 0, frameUVs[i], 0, frameUVs[i].length);
+			}
+		}
+		if (other.frameOffsets != null) {
+			frameOffsets = new float[other.frameOffsets.length][];
+			for (int i = 0; i < frameOffsets.length; i++) {
+				frameOffsets[i] = new float[other.frameOffsets[i].length];
+				arraycopy(other.frameOffsets[i], 0, frameOffsets[i], 0, frameOffsets[i].length);
+			}
+		}
 	}
 
-	public void apply (SlotPose slot, HasTextureRegion attachment) {
-		int index = slot.getSequenceIndex();
+	public void precompute (HasTextureRegion attachment) {
+		if (attachment instanceof RegionAttachment region) {
+			frameOffsets = new float[regions.length][];
+			frameUVs = new float[regions.length][];
+			for (int i = 0; i < regions.length; i++) {
+				frameOffsets[i] = new float[8];
+				frameUVs[i] = new float[8];
+				RegionAttachment.computeRegionData(regions[i], region.getX(), region.getY(), region.getScaleX(), region.getScaleY(),
+					region.getRotation(), region.getWidth(), region.getHeight(), frameOffsets[i], frameUVs[i]);
+			}
+		} else if (attachment instanceof MeshAttachment mesh) {
+			float[] regionUVs = mesh.getRegionUVs();
+			if (regionUVs == null) return;
+			frameOffsets = null;
+			frameUVs = new float[regions.length][];
+			for (int i = 0; i < regions.length; i++) {
+				frameUVs[i] = new float[regionUVs.length];
+				MeshAttachment.computeMeshUVs(regions[i], regionUVs, frameUVs[i]);
+			}
+		}
+	}
+
+	public int resolveIndex (SlotPose pose) {
+		int index = pose.getSequenceIndex();
 		if (index == -1) index = setupIndex;
 		if (index >= regions.length) index = regions.length - 1;
-		TextureRegion region = regions[index];
-		if (attachment.getRegion() != region) {
-			attachment.setRegion(region);
-			attachment.updateRegion();
-		}
+		return index;
+	}
+
+	public TextureRegion getFrameRegion (int frameIndex) {
+		return regions[frameIndex];
+	}
+
+	public float[] getFrameUVs (int frameIndex) {
+		return frameUVs[frameIndex];
+	}
+
+	public float[] getFrameOffset (int frameIndex) {
+		return frameOffsets[frameIndex];
 	}
 
 	public String getPath (String basePath, int index) {

@@ -38,6 +38,7 @@ import com.badlogic.gdx.utils.Null;
 
 import com.esotericsoftware.spine.Skeleton;
 import com.esotericsoftware.spine.Slot;
+import com.esotericsoftware.spine.SlotPose;
 
 /** An attachment that displays a textured mesh. A mesh has hull vertices and internal vertices within the hull. Holes are not
  * supported. Each vertex has UVs (texture coordinates) and triangles are used to map an image on to the mesh.
@@ -97,6 +98,13 @@ public class MeshAttachment extends VertexAttachment implements HasTextureRegion
 		this.region = region;
 	}
 
+	/** Returns the region, or if the attachment has a {@link #sequence}, the region for the given slot's
+	 * {@link SlotPose#getSequenceIndex()}. */
+	public @Null TextureRegion getRegion (SlotPose pose) {
+		if (sequence != null) return sequence.getFrameRegion(sequence.resolveIndex(pose));
+		return region;
+	}
+
 	public @Null TextureRegion getRegion () {
 		return region;
 	}
@@ -106,10 +114,17 @@ public class MeshAttachment extends VertexAttachment implements HasTextureRegion
 	public void updateRegion () {
 		float[] regionUVs = this.regionUVs;
 		if (this.uvs == null || this.uvs.length != regionUVs.length) this.uvs = new float[regionUVs.length];
-		float[] uvs = this.uvs;
+		computeMeshUVs(region, regionUVs, this.uvs);
+	}
+
+	/** Computes mesh UVs for a given region and regionUVs, writing results into the provided output array.
+	 * @param region The texture region to compute UVs for, or null.
+	 * @param regionUVs The normalized UV coordinates within the texture region.
+	 * @param uvs Output array for the computed UVs (same length as regionUVs). */
+	static void computeMeshUVs (@Null TextureRegion textureRegion, float[] regionUVs, float[] uvs) {
 		int n = uvs.length;
 		float u, v, width, height;
-		if (region instanceof AtlasRegion region) {
+		if (textureRegion instanceof AtlasRegion region) {
 			u = region.getU();
 			v = region.getV();
 			float textureWidth = region.getTexture().getWidth(), textureHeight = region.getTexture().getHeight();
@@ -154,14 +169,14 @@ public class MeshAttachment extends VertexAttachment implements HasTextureRegion
 				height = region.originalHeight / textureHeight;
 			}
 			}
-		} else if (region == null) {
+		} else if (textureRegion == null) {
 			u = v = 0;
 			width = height = 1;
 		} else {
-			u = region.getU();
-			v = region.getV();
-			width = region.getU2() - u;
-			height = region.getV2() - v;
+			u = textureRegion.getU();
+			v = textureRegion.getV();
+			width = textureRegion.getU2() - u;
+			height = textureRegion.getV2() - v;
 		}
 		for (int i = 0; i < n; i += 2) {
 			uvs[i] = u + regionUVs[i] * width;
@@ -169,11 +184,16 @@ public class MeshAttachment extends VertexAttachment implements HasTextureRegion
 		}
 	}
 
-	/** If the attachment has a {@link #sequence}, the region may be changed. */
 	public void computeWorldVertices (Skeleton skeleton, Slot slot, int start, int count, float[] worldVertices, int offset,
 		int stride) {
-		if (sequence != null) sequence.apply(slot.getAppliedPose(), this);
 		super.computeWorldVertices(skeleton, slot, start, count, worldVertices, offset, stride);
+	}
+
+	/** Returns the UVs, or if the attachment has a {@link #sequence}, the UVs for the given slot's
+	 * {@link SlotPose#getSequenceIndex()}. */
+	public float[] getUVs (SlotPose pose) {
+		if (sequence != null) return sequence.getFrameUVs(sequence.resolveIndex(pose));
+		return uvs;
 	}
 
 	/** Triplets of vertex indices which describe the mesh's triangulation. */
@@ -259,8 +279,12 @@ public class MeshAttachment extends VertexAttachment implements HasTextureRegion
 		return sequence;
 	}
 
+	/** Sets the sequence. If the sequence is not null and {@link #regionUVs} is available, precomputes per-frame data. For mesh
+	 * attachments where regionUVs is set after the sequence (e.g. linked meshes), call
+	 * {@link Sequence#precompute(HasTextureRegion)} after regionUVs are available. */
 	public void setSequence (@Null Sequence sequence) {
 		this.sequence = sequence;
+		if (sequence != null && regionUVs != null) sequence.precompute(this);
 	}
 
 	/** The parent mesh if this is a linked mesh, else null. A linked mesh shares the {@link #bones}, {@link #vertices},

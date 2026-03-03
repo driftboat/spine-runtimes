@@ -492,7 +492,9 @@ public class SkeletonJson extends SkeletonLoader {
 				if (parent == null) throw new SerializationException("Parent mesh not found: " + linkedMesh.parent);
 				linkedMesh.mesh.setTimelineAttachment(linkedMesh.inheritTimelines ? (VertexAttachment)parent : linkedMesh.mesh);
 				linkedMesh.mesh.setParentMesh((MeshAttachment)parent);
-				if (linkedMesh.mesh.getRegion() != null) linkedMesh.mesh.updateRegion();
+				if (linkedMesh.mesh.getSequence() != null)
+					linkedMesh.mesh.getSequence().precompute(linkedMesh.mesh);
+				else if (linkedMesh.mesh.getRegion() != null) linkedMesh.mesh.updateRegion();
 			}
 			linkedMeshes.clear();
 
@@ -609,10 +611,10 @@ public class SkeletonJson extends SkeletonLoader {
 
 			mesh.setWidth(map.getFloat("width", 0) * scale);
 			mesh.setHeight(map.getFloat("height", 0) * scale);
-			mesh.setSequence(sequence);
 
 			String parent = map.getString("parent", null);
 			if (parent != null) {
+				mesh.setSequence(sequence);
 				linkedMeshes
 					.add(new LinkedMesh(mesh, map.getString("skin", null), slotIndex, parent, map.getBoolean("timelines", true)));
 				yield mesh;
@@ -622,6 +624,7 @@ public class SkeletonJson extends SkeletonLoader {
 			readVertices(map, mesh, uvs.length);
 			mesh.setTriangles(map.require("triangles").asShortArray());
 			mesh.setRegionUVs(uvs);
+			mesh.setSequence(sequence);
 			if (mesh.getRegion() != null) mesh.updateRegion();
 
 			if (map.has("hull")) mesh.setHullLength(map.require("hull").asInt() << 1);

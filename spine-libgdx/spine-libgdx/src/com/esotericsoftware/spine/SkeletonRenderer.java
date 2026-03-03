@@ -102,14 +102,14 @@ public class SkeletonRenderer {
 					| (int)(b * slotColor.b * color.b * multiplier) << 16 //
 					| (int)(g * slotColor.g * color.g * multiplier) << 8 //
 					| (int)(r * slotColor.r * color.r * multiplier));
-				float[] uvs = region.getUVs();
+				float[] uvs = region.getUVs(pose);
 				for (int u = 0, v = 2; u < 8; u += 2, v += 5) {
 					vertices[v] = c;
 					vertices[v + 1] = uvs[u];
 					vertices[v + 2] = uvs[u + 1];
 				}
 
-				batch.draw(region.getRegion().getTexture(), vertices, 0, 20);
+				batch.draw(region.getRegion(pose).getTexture(), vertices, 0, 20);
 
 			} else if (attachment instanceof ClippingAttachment) {
 				throw new RuntimeException(batch.getClass().getSimpleName()
@@ -155,8 +155,8 @@ public class SkeletonRenderer {
 						vertices = this.vertices.items;
 						region.computeWorldVertices(slot, vertices, 0, 5);
 						triangles = quadTriangles;
-						texture = region.getRegion().getTexture();
-						uvs = region.getUVs();
+						texture = region.getRegion(pose).getTexture();
+						uvs = region.getUVs(pose);
 						color = region.getColor();
 
 					} else if (attachment instanceof MeshAttachment mesh) {
@@ -165,8 +165,8 @@ public class SkeletonRenderer {
 						vertices = this.vertices.setSize(verticesLength);
 						mesh.computeWorldVertices(skeleton, slot, 0, count, vertices, 0, 5);
 						triangles = mesh.getTriangles();
-						texture = mesh.getRegion().getTexture();
-						uvs = mesh.getUVs();
+						texture = mesh.getRegion(pose).getTexture();
+						uvs = mesh.getUVs(pose);
 						color = mesh.getColor();
 
 					} else if (attachment instanceof ClippingAttachment clip) {
@@ -250,8 +250,8 @@ public class SkeletonRenderer {
 						vertices = this.vertices.items;
 						region.computeWorldVertices(slot, vertices, 0, 6);
 						triangles = quadTriangles;
-						texture = region.getRegion().getTexture();
-						uvs = region.getUVs();
+						texture = region.getRegion(pose).getTexture();
+						uvs = region.getUVs(pose);
 						color = region.getColor();
 
 					} else if (attachment instanceof MeshAttachment mesh) {
@@ -260,8 +260,8 @@ public class SkeletonRenderer {
 						vertices = this.vertices.setSize(verticesLength);
 						mesh.computeWorldVertices(skeleton, slot, 0, count, vertices, 0, 6);
 						triangles = mesh.getTriangles();
-						texture = mesh.getRegion().getTexture();
-						uvs = mesh.getUVs();
+						texture = mesh.getRegion(pose).getTexture();
+						uvs = mesh.getUVs(pose);
 						color = mesh.getColor();
 
 					} else if (attachment instanceof ClippingAttachment clip) {
